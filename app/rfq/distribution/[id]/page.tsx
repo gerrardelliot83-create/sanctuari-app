@@ -6,17 +6,26 @@ import toast, { Toaster } from 'react-hot-toast'
 
 const sanctuariNetwork = {
   insurers: [
-    { id: '1', name: 'HDFC ERGO General Insurance', email: 'contact@hdfcergo.com' },
-    { id: '2', name: 'ICICI Lombard', email: 'contact@icicilombard.com' },
-    { id: '3', name: 'Bajaj Allianz', email: 'contact@bajajallianz.com' },
-    { id: '4', name: 'Tata AIG', email: 'contact@tataaig.com' },
-    { id: '5', name: 'New India Assurance', email: 'contact@newindia.co.in' }
+    { id: '1', name: 'HDFC ERGO General Insurance' },
+    { id: '2', name: 'ICICI Lombard' },
+    { id: '3', name: 'Bajaj Allianz' },
+    { id: '4', name: 'Tata AIG' },
+    { id: '5', name: 'New India Assurance' },
+    { id: '6', name: 'Oriental Insurance' },
+    { id: '7', name: 'United India Insurance' },
+    { id: '8', name: 'National Insurance' },
+    { id: '9', name: 'Star Health Insurance' },
+    { id: '10', name: 'Max Bupa Health' }
   ],
   brokers: [
-    { id: '1', name: 'Marsh India', email: 'contact@marsh.com' },
-    { id: '2', name: 'Willis Towers Watson', email: 'contact@willistowerswatson.com' },
-    { id: '3', name: 'Aon India', email: 'contact@aon.com' },
-    { id: '4', name: 'JB Boda', email: 'contact@jbboda.com' }
+    { id: '1', name: 'Marsh India' },
+    { id: '2', name: 'Willis Towers Watson' },
+    { id: '3', name: 'Aon India' },
+    { id: '4', name: 'JB Boda' },
+    { id: '5', name: 'Prudent Insurance Brokers' },
+    { id: '6', name: 'Howden Insurance Brokers' },
+    { id: '7', name: 'Global Insurance Brokers' },
+    { id: '8', name: 'Anand Rathi Insurance' }
   ]
 }
 
@@ -72,7 +81,16 @@ export default function RFQDistributionPage({
                              selectedInsurers.length + 
                              selectedBrokers.length
       
-      toast.success(`RFQ distributed to ${totalRecipients} recipients`)
+      // For testing, all emails go to hello@sanctuari.io
+      // In production, this will send unique links to each recipient
+      console.log('Distribution list:', {
+        customEmails: customEmails.filter(e => e),
+        insurers: selectedInsurers.map(id => sanctuariNetwork.insurers.find(i => i.id === id)?.name),
+        brokers: selectedBrokers.map(id => sanctuariNetwork.brokers.find(b => b.id === id)?.name),
+        testEmail: 'hello@sanctuari.io'
+      })
+      
+      toast.success(`RFQ distributed to ${totalRecipients} recipients (Test mode: sent to hello@sanctuari.io)`)
       
       setTimeout(() => {
         router.push(`/rfq/${rfqId}/dashboard`)
@@ -180,6 +198,17 @@ export default function RFQDistributionPage({
             <div className="fade-in">
               <div className="card" style={{ marginBottom: '24px' }}>
                 <h2 style={{ marginBottom: '24px' }}>Select from Sanctuari Network</h2>
+                <div style={{
+                  padding: '12px',
+                  background: 'rgba(124, 58, 237, 0.05)',
+                  borderRadius: '8px',
+                  marginBottom: '20px'
+                }}>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--primary-purple)' }}>
+                    Note: In test mode, all distributions will be sent to hello@sanctuari.io. 
+                    In production, each recipient will receive a unique link to their email.
+                  </p>
+                </div>
                 
                 <div style={{ marginBottom: '32px' }}>
                   <h3 style={{ fontSize: '1.1rem', marginBottom: '16px' }}>Insurers</h3>
@@ -209,7 +238,7 @@ export default function RFQDistributionPage({
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: '500' }}>{insurer.name}</div>
                           <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                            {insurer.email}
+                            Sanctuari Network Partner
                           </div>
                         </div>
                       </label>
@@ -245,7 +274,7 @@ export default function RFQDistributionPage({
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: '500' }}>{broker.name}</div>
                           <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                            {broker.email}
+                            Sanctuari Partner Broker
                           </div>
                         </div>
                       </label>

@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { insuranceProducts, loadRFQData, RFQSection } from '@/utils/products'
+import FieldRenderer from '@/components/rfq/FieldRenderer'
 import toast, { Toaster } from 'react-hot-toast'
 
 function CreateRFQContent() {
@@ -104,145 +105,6 @@ function CreateRFQContent() {
     }, 1500)
   }
 
-  const renderField = (field: any, sectionName: string) => {
-    const fieldKey = `${sectionName}_${field.questionNumber}`
-    const value = formData[fieldKey] || ''
-
-    // Handle different response field types
-    const responseField = field.responseField.toLowerCase()
-    
-    if (responseField.includes('yes/no') || responseField.includes('yes or no')) {
-      return (
-        <div key={fieldKey} style={{ marginBottom: '20px' }}>
-          <label className="label">
-            {field.question}
-            {field.required && <span style={{ color: 'var(--error)' }}> *</span>}
-          </label>
-          <div style={{ display: 'flex', gap: '16px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              <input
-                type="radio"
-                name={fieldKey}
-                value="yes"
-                checked={value === 'yes'}
-                onChange={(e) => handleInputChange(fieldKey, e.target.value)}
-              />
-              Yes
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              <input
-                type="radio"
-                name={fieldKey}
-                value="no"
-                checked={value === 'no'}
-                onChange={(e) => handleInputChange(fieldKey, e.target.value)}
-              />
-              No
-            </label>
-          </div>
-          {field.instructions && (
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-              {field.instructions}
-            </p>
-          )}
-        </div>
-      )
-    }
-
-    if (responseField.includes('date') || responseField.includes('dd/mm/yyyy')) {
-      return (
-        <div key={fieldKey} style={{ marginBottom: '20px' }}>
-          <label className="label">
-            {field.question}
-            {field.required && <span style={{ color: 'var(--error)' }}> *</span>}
-          </label>
-          <input
-            type="date"
-            className="input-field"
-            value={value}
-            onChange={(e) => handleInputChange(fieldKey, e.target.value)}
-            required={field.required}
-          />
-          {field.instructions && (
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-              {field.instructions}
-            </p>
-          )}
-        </div>
-      )
-    }
-
-    if (responseField.includes('number') || responseField.includes('amount') || responseField.includes('₹')) {
-      return (
-        <div key={fieldKey} style={{ marginBottom: '20px' }}>
-          <label className="label">
-            {field.question}
-            {field.required && <span style={{ color: 'var(--error)' }}> *</span>}
-          </label>
-          <input
-            type="number"
-            className="input-field"
-            placeholder={field.responseField.replace('[', '').replace(']', '')}
-            value={value}
-            onChange={(e) => handleInputChange(fieldKey, e.target.value)}
-            required={field.required}
-          />
-          {field.instructions && (
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-              {field.instructions}
-            </p>
-          )}
-        </div>
-      )
-    }
-
-    if (responseField.includes('email')) {
-      return (
-        <div key={fieldKey} style={{ marginBottom: '20px' }}>
-          <label className="label">
-            {field.question}
-            {field.required && <span style={{ color: 'var(--error)' }}> *</span>}
-          </label>
-          <input
-            type="email"
-            className="input-field"
-            placeholder={field.responseField.replace('[', '').replace(']', '')}
-            value={value}
-            onChange={(e) => handleInputChange(fieldKey, e.target.value)}
-            required={field.required}
-          />
-          {field.instructions && (
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-              {field.instructions}
-            </p>
-          )}
-        </div>
-      )
-    }
-
-    // Default text input
-    return (
-      <div key={fieldKey} style={{ marginBottom: '20px' }}>
-        <label className="label">
-          {field.question}
-          {field.required && <span style={{ color: 'var(--error)' }}> *</span>}
-        </label>
-        <input
-          type="text"
-          className="input-field"
-          placeholder={field.responseField.replace('[', '').replace(']', '')}
-          value={value}
-          onChange={(e) => handleInputChange(fieldKey, e.target.value)}
-          required={field.required}
-        />
-        {field.instructions && (
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-            {field.instructions}
-          </p>
-        )}
-      </div>
-    )
-  }
 
   if (!selectedProduct) {
     return (
@@ -396,7 +258,15 @@ function CreateRFQContent() {
               </h2>
               
               <div style={{ maxHeight: '500px', overflowY: 'auto', paddingRight: '12px' }}>
-                {currentSection.fields.map(field => renderField(field, currentSection.name))}
+                {currentSection.fields.map(field => (
+                  <FieldRenderer
+                    key={`${currentSection.name}_${field.questionNumber}`}
+                    field={field}
+                    sectionName={currentSection.name}
+                    value={formData[`${currentSection.name}_${field.questionNumber}`]}
+                    onChange={handleInputChange}
+                  />
+                ))}
               </div>
 
               <div style={{
