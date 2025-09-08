@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
-import { insuranceProducts, RFQSection } from '@/utils/rfq-parser'
+import { insuranceProducts, loadRFQData, RFQSection } from '@/utils/products'
 import toast, { Toaster } from 'react-hot-toast'
 
 function CreateRFQContent() {
@@ -12,23 +12,35 @@ function CreateRFQContent() {
   const { user } = useAuth()
   
   const [selectedProduct, setSelectedProduct] = useState('')
-  const [currentSection, setCurrentSection] = useState(0)
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
   const [formData, setFormData] = useState<Record<string, any>>({})
   const [rfqSections, setRfqSections] = useState<RFQSection[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingData, setLoadingData] = useState(false)
   const [isFirstRFQ, setIsFirstRFQ] = useState(true)
 
   useEffect(() => {
     const productParam = searchParams.get('product')
     if (productParam) {
-      setSelectedProduct(productParam)
+      handleProductSelect(productParam)
     }
   }, [searchParams])
 
-  const handleProductSelect = (productId: string) => {
+  const handleProductSelect = async (productId: string) => {
     setSelectedProduct(productId)
-    setCurrentSection(0)
+    setCurrentSectionIndex(0)
     setFormData({})
+    setLoadingData(true)
+    
+    try {
+      const sections = await loadRFQData(productId)
+      setRfqSections(sections)
+    } catch (error) {
+      toast.error('Failed to load product data')
+      console.error(error)
+    } finally {
+      setLoadingData(false)
+    }
   }
 
   const handleInputChange = (fieldKey: string, value: any) => {
@@ -39,14 +51,26 @@ function CreateRFQContent() {
   }
 
   const handleNext = () => {
-    if (currentSection < rfqSections.length - 1) {
-      setCurrentSection(currentSection + 1)
+    const currentSection = rfqSections[currentSectionIndex]
+    const requiredFields = currentSection.fields.filter(f => f.required)
+    const missingFields = requiredFields.filter(f => {
+      const key = `${currentSection.name}_${f.questionNumber}`
+      return !formData[key]
+    })
+
+    if (missingFields.length > 0) {
+      toast.error(`Please fill all required fields`)
+      return
+    }
+
+    if (currentSectionIndex < rfqSections.length - 1) {
+      setCurrentSectionIndex(currentSectionIndex + 1)
     }
   }
 
   const handleBack = () => {
-    if (currentSection > 0) {
-      setCurrentSection(currentSection - 1)
+    if (currentSectionIndex > 0) {
+      setCurrentSectionIndex(currentSectionIndex - 1)
     }
   }
 
@@ -84,10 +108,16 @@ function CreateRFQContent() {
     const fieldKey = `${sectionName}_${field.questionNumber}`
     const value = formData[fieldKey] || ''
 
-    if (field.responseField.includes('Yes/No')) {
+    // Handle different response field types
+    const responseField = field.responseField.toLowerCase()
+    
+    if (responseField.includes('yes/no') || responseField.includes('yes or no')) {
       return (
         <div key={fieldKey} style={{ marginBottom: '20px' }}>
-          <label className="label">{field.question}</label>
+          <label className="label">
+            {field.question}
+            {field.required && <span style={{ color: 'var(--error)' }}> *</span>}
+          </label>
           <div style={{ display: 'flex', gap: '16px' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
               <input
@@ -119,11 +149,83 @@ function CreateRFQContent() {
       )
     }
 
+    if (responseField.includes('date') || responseField.includes('dd/mm/yyyy')) {
+      return (
+        <div key={fieldKey} style={{ marginBottom: '20px' }}>
+          <label className="label">
+            {field.question}
+            {field.required && <span style={{ color: 'var(--error)' }}> *</span>}
+          </label>
+          <input
+            type="date"
+            className="input-field"
+            value={value}
+            onChange={(e) => handleInputChange(fieldKey, e.target.value)}
+            required={field.required}
+          />
+          {field.instructions && (
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+              {field.instructions}
+            </p>
+          )}
+        </div>
+      )
+    }
+
+    if (responseField.includes('number') || responseField.includes('amount') || responseField.includes('₹')) {
+      return (
+        <div key={fieldKey} style={{ marginBottom: '20px' }}>
+          <label className="label">
+            {field.question}
+            {field.required && <span style={{ color: 'var(--error)' }}> *</span>}
+          </label>
+          <input
+            type="number"
+            className="input-field"
+            placeholder={field.responseField.replace('[', '').replace(']', '')}
+            value={value}
+            onChange={(e) => handleInputChange(fieldKey, e.target.value)}
+            required={field.required}
+          />
+          {field.instructions && (
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+              {field.instructions}
+            </p>
+          )}
+        </div>
+      )
+    }
+
+    if (responseField.includes('email')) {
+      return (
+        <div key={fieldKey} style={{ marginBottom: '20px' }}>
+          <label className="label">
+            {field.question}
+            {field.required && <span style={{ color: 'var(--error)' }}> *</span>}
+          </label>
+          <input
+            type="email"
+            className="input-field"
+            placeholder={field.responseField.replace('[', '').replace(']', '')}
+            value={value}
+            onChange={(e) => handleInputChange(fieldKey, e.target.value)}
+            required={field.required}
+          />
+          {field.instructions && (
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+              {field.instructions}
+            </p>
+          )}
+        </div>
+      )
+    }
+
+    // Default text input
     return (
       <div key={fieldKey} style={{ marginBottom: '20px' }}>
         <label className="label">
           {field.question}
-          {field.responseField.includes('Enter') && ' *'}
+          {field.required && <span style={{ color: 'var(--error)' }}> *</span>}
         </label>
         <input
           type="text"
@@ -131,6 +233,7 @@ function CreateRFQContent() {
           placeholder={field.responseField.replace('[', '').replace(']', '')}
           value={value}
           onChange={(e) => handleInputChange(fieldKey, e.target.value)}
+          required={field.required}
         />
         {field.instructions && (
           <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
@@ -146,7 +249,7 @@ function CreateRFQContent() {
       <div style={{ minHeight: '100vh', background: 'var(--background-secondary)' }}>
         <Toaster position="top-right" />
         <div className="content-wrapper">
-          <div className="container" style={{ maxWidth: '960px' }}>
+          <div className="container" style={{ maxWidth: '1200px' }}>
             <div style={{ marginBottom: '40px' }}>
               <button
                 onClick={() => router.push('/dashboard')}
@@ -163,14 +266,17 @@ function CreateRFQContent() {
               </button>
               <h1>Create New RFQ</h1>
               <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
-                Select an insurance product to get started
+                Select an insurance product to get started ({insuranceProducts.length} products available)
               </p>
             </div>
 
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-              gap: '20px'
+              gap: '16px',
+              maxHeight: '600px',
+              overflowY: 'auto',
+              padding: '4px'
             }}>
               {insuranceProducts.map(product => (
                 <button
@@ -178,7 +284,7 @@ function CreateRFQContent() {
                   onClick={() => handleProductSelect(product.id)}
                   className="card"
                   style={{
-                    padding: '24px',
+                    padding: '20px',
                     textAlign: 'left',
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',
@@ -186,17 +292,17 @@ function CreateRFQContent() {
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = 'var(--primary-purple)'
-                    e.currentTarget.style.transform = 'translateY(-4px)'
+                    e.currentTarget.style.transform = 'translateY(-2px)'
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = 'transparent'
                     e.currentTarget.style.transform = 'translateY(0)'
                   }}
                 >
-                  <h3 style={{ fontSize: '1.1rem', marginBottom: '8px' }}>
+                  <h3 style={{ fontSize: '1rem', marginBottom: '8px' }}>
                     {product.name}
                   </h3>
-                  <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                     Click to create RFQ
                   </p>
                 </button>
@@ -227,6 +333,7 @@ function CreateRFQContent() {
   }
 
   const currentProduct = insuranceProducts.find(p => p.id === selectedProduct)
+  const currentSection = rfqSections[currentSectionIndex]
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--background-secondary)' }}>
@@ -248,114 +355,110 @@ function CreateRFQContent() {
               ← Change Product
             </button>
             <h1>{currentProduct?.name} RFQ</h1>
-            <div style={{
-              display: 'flex',
-              gap: '8px',
-              marginTop: '24px'
-            }}>
-              {[1, 2, 3, 4, 5].map((step) => (
-                <div
-                  key={step}
-                  style={{
-                    flex: 1,
-                    height: '4px',
-                    borderRadius: '2px',
-                    background: step <= currentSection + 1 ? 'var(--primary-purple)' : 'var(--border)',
-                    transition: 'background 0.3s ease'
-                  }}
-                />
-              ))}
-            </div>
+            {rfqSections.length > 0 && (
+              <div style={{
+                display: 'flex',
+                gap: '8px',
+                marginTop: '24px'
+              }}>
+                {rfqSections.map((_, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      flex: 1,
+                      height: '4px',
+                      borderRadius: '2px',
+                      background: index <= currentSectionIndex ? 'var(--primary-purple)' : 'var(--border)',
+                      transition: 'background 0.3s ease'
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="card">
-            <h2 style={{ marginBottom: '24px' }}>Business Information</h2>
-            
-            <div>
-              <div style={{ marginBottom: '20px' }}>
-                <label className="label">Name of Insured *</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="Enter company name"
-                  value={formData.companyName || ''}
-                  onChange={(e) => handleInputChange('companyName', e.target.value)}
-                />
-              </div>
-
-              <div style={{ marginBottom: '20px' }}>
-                <label className="label">Communication Address *</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="Enter address"
-                  value={formData.address || ''}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-                <div>
-                  <label className="label">Policy Period From *</label>
-                  <input
-                    type="date"
-                    className="input-field"
-                    value={formData.policyFrom || ''}
-                    onChange={(e) => handleInputChange('policyFrom', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="label">Policy Period To *</label>
-                  <input
-                    type="date"
-                    className="input-field"
-                    value={formData.policyTo || ''}
-                    onChange={(e) => handleInputChange('policyTo', e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '20px' }}>
-                <label className="label">Risk Location Address *</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="Enter risk location"
-                  value={formData.riskLocation || ''}
-                  onChange={(e) => handleInputChange('riskLocation', e.target.value)}
-                />
-              </div>
+          {loadingData ? (
+            <div className="card" style={{ textAlign: 'center', padding: '60px' }}>
+              <div className="loading-spinner" style={{ margin: '0 auto', width: '48px', height: '48px' }}></div>
+              <p style={{ marginTop: '20px', color: 'var(--text-secondary)' }}>Loading RFQ questions...</p>
             </div>
+          ) : currentSection ? (
+            <div className="card">
+              <h2 style={{ marginBottom: '24px' }}>
+                {currentSection.name}
+                <span style={{ 
+                  fontSize: '0.875rem', 
+                  color: 'var(--text-secondary)',
+                  marginLeft: '12px'
+                }}>
+                  (Section {currentSectionIndex + 1} of {rfqSections.length})
+                </span>
+              </h2>
+              
+              <div style={{ maxHeight: '500px', overflowY: 'auto', paddingRight: '12px' }}>
+                {currentSection.fields.map(field => renderField(field, currentSection.name))}
+              </div>
 
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginTop: '32px',
-              paddingTop: '24px',
-              borderTop: '1px solid var(--border-light)'
-            }}>
-              <button
-                onClick={() => router.push('/dashboard')}
-                className="secondary-button"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                className="primary-button"
-                disabled={loading}
-              >
-                {loading ? (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span className="loading-spinner"></span>
-                    Creating RFQ...
-                  </span>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginTop: '32px',
+                paddingTop: '24px',
+                borderTop: '1px solid var(--border-light)'
+              }}>
+                {currentSectionIndex > 0 ? (
+                  <button
+                    onClick={handleBack}
+                    className="secondary-button"
+                  >
+                    Back
+                  </button>
                 ) : (
-                  isFirstRFQ ? 'Create RFQ (Free)' : 'Proceed to Payment (₹1,599)'
+                  <button
+                    onClick={() => setSelectedProduct('')}
+                    className="secondary-button"
+                  >
+                    Cancel
+                  </button>
                 )}
+
+                {currentSectionIndex < rfqSections.length - 1 ? (
+                  <button
+                    onClick={handleNext}
+                    className="primary-button"
+                  >
+                    Next Section
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleSubmit}
+                    className="primary-button"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span className="loading-spinner"></span>
+                        Creating RFQ...
+                      </span>
+                    ) : (
+                      isFirstRFQ ? 'Create RFQ (Free)' : 'Proceed to Payment (₹1,599)'
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="card" style={{ textAlign: 'center', padding: '60px' }}>
+              <p style={{ color: 'var(--text-secondary)' }}>No data available for this product</p>
+              <button
+                onClick={() => setSelectedProduct('')}
+                className="primary-button"
+                style={{ marginTop: '20px' }}
+              >
+                Select Another Product
               </button>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

@@ -27,15 +27,20 @@ const companySizes = [
   '500+ employees'
 ]
 
-const insuranceProducts = [
-  { id: 'general_liability', name: 'Commercial General Liability', icon: 'CGL' },
-  { id: 'property', name: 'Property Insurance', icon: 'PI' },
-  { id: 'cyber', name: 'Cyber Liability Insurance', icon: 'CL' },
-  { id: 'directors', name: 'Directors & Officers Liability', icon: 'D&O' },
-  { id: 'workers', name: 'Workers Compensation', icon: 'WC' },
-  { id: 'professional', name: 'Professional Indemnity', icon: 'PI' },
-  { id: 'marine', name: 'Marine Cargo Insurance', icon: 'MC' },
-  { id: 'group_health', name: 'Group Health Insurance', icon: 'GH' }
+// Popular products to show during onboarding
+const popularProducts = [
+  { id: 'commercial_general_liability', name: 'Commercial General Liability', icon: 'CGL' },
+  { id: 'fire_special_perils', name: 'Fire & Special Perils', icon: 'FSP' },
+  { id: 'cyber_liability', name: 'Cyber Liability Insurance', icon: 'CL' },
+  { id: 'directors_officers', name: 'Directors & Officers Liability', icon: 'D&O' },
+  { id: 'workmen_compensation', name: "Workmen's Compensation", icon: 'WC' },
+  { id: 'professional_indemnity', name: 'Professional Indemnity', icon: 'PI' },
+  { id: 'marine_cargo_open', name: 'Marine Cargo Insurance', icon: 'MC' },
+  { id: 'group_health', name: 'Group Health Insurance', icon: 'GH' },
+  { id: 'product_liability', name: 'Product Liability', icon: 'PL' },
+  { id: 'public_liability_industrial', name: 'Public Liability', icon: 'PL' },
+  { id: 'business_interruption', name: 'Business Interruption', icon: 'BI' },
+  { id: 'view_all', name: 'View All 47 Products', icon: '→' }
 ]
 
 export default function OnboardingPage() {
@@ -97,7 +102,9 @@ export default function OnboardingPage() {
     try {
       await new Promise(resolve => setTimeout(resolve, 1500))
       
-      if (formData.selectedProduct) {
+      if (formData.selectedProduct === 'view_all') {
+        router.push('/rfq/create')
+      } else if (formData.selectedProduct) {
         router.push(`/rfq/create?product=${formData.selectedProduct}`)
       } else {
         router.push('/dashboard')
@@ -367,7 +374,7 @@ export default function OnboardingPage() {
                   gap: '16px',
                   marginBottom: '24px'
                 }}>
-                  {insuranceProducts.map(product => (
+                  {popularProducts.map(product => (
                     <button
                       key={product.id}
                       onClick={() => handleProductSelect(product.id)}
