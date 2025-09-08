@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { insuranceProducts, RFQSection } from '@/utils/rfq-parser'
 import toast, { Toaster } from 'react-hot-toast'
 
-export default function CreateRFQPage() {
+function CreateRFQContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuth()
@@ -66,7 +66,8 @@ export default function CreateRFQPage() {
   }
 
   const initiatePayment = async () => {
-    toast.success('Redirecting to payment...')
+    // Razorpay integration pending - bypass for testing
+    toast.success('Payment feature coming soon! Creating RFQ for testing...')
     setTimeout(() => {
       router.push('/rfq/distribution/new-rfq-id')
     }, 2000)
@@ -358,5 +359,22 @@ export default function CreateRFQPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function CreateRFQPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center' 
+      }}>
+        <div className="loading-spinner" style={{ width: '48px', height: '48px' }}></div>
+      </div>
+    }>
+      <CreateRFQContent />
+    </Suspense>
   )
 }

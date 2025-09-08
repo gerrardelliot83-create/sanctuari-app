@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import toast, { Toaster } from 'react-hot-toast'
 
@@ -20,7 +20,16 @@ const sanctuariNetwork = {
   ]
 }
 
-export default function RFQDistributionPage({ params }: { params: { id: string } }) {
+export default function RFQDistributionPage({ 
+  params 
+}: { 
+  params: Promise<{ id: string }> 
+}) {
+  const [rfqId, setRfqId] = useState<string>('')
+  
+  useEffect(() => {
+    params.then(p => setRfqId(p.id))
+  }, [params])
   const router = useRouter()
   const [customEmails, setCustomEmails] = useState<string[]>([''])
   const [selectedInsurers, setSelectedInsurers] = useState<string[]>([])
@@ -66,7 +75,7 @@ export default function RFQDistributionPage({ params }: { params: { id: string }
       toast.success(`RFQ distributed to ${totalRecipients} recipients`)
       
       setTimeout(() => {
-        router.push(`/rfq/${params.id}/dashboard`)
+        router.push(`/rfq/${rfqId}/dashboard`)
       }, 1500)
     } catch (error) {
       toast.error('Failed to distribute RFQ')

@@ -85,8 +85,7 @@ NEXT_PUBLIC_APP_URL=https://your-app-name.vercel.app
 NEXT_PUBLIC_SITE_NAME=Sanctuari
 
 # Optional - Add later when you have accounts
-UPLOADTHING_APP_ID=skip_for_now
-UPLOADTHING_SECRET=skip_for_now
+UPLOADTHING_TOKEN=skip_for_now
 ANTHROPIC_API_KEY=skip_for_now
 LLAMA_PARSE_API_KEY=skip_for_now
 NEXT_PUBLIC_RAZORPAY_KEY_ID=skip_for_now
